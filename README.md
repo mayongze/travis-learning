@@ -1,4 +1,5 @@
 # travis learning
+[![Build Status Travis](https://img.shields.io/travis/etcd-io/etcdlabs.svg?style=flat-square&&branch=master)](https://travis-ci.com/etcd-io/etcd)
 
 ### travis job
 一共有2个阶段`test、deploy`,8个job
