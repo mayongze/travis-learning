@@ -5,7 +5,13 @@ import (
 	"log"
 )
 
+var (
+	// GitSHA 自动构建
+	GitSHA string = ""
+)
+
 func main() {
+	log.Println("GitSHA=", GitSHA)
 	str := "Hello World!"
 	result := Reverse(str)
 	log.Println(result)
