@@ -13,7 +13,7 @@ func TestReverse(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{"1", args{"Hello World!"}, "!dlroW olleH"},
-		{"2", args{"你好,世界!"}, "!界世,好你1"},
+		{"2", args{"你好,世界!"}, "!界世,好你"},
 		{"mty", args{""}, ""},
 	}
 	for _, tt := range tests {
