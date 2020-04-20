@@ -11,41 +11,41 @@ branches:
 
 # 需要用的services, 设置和启动服务
 services:
-- docker
+  - docker
 
 # go build参数
 gobuild_args: -x -ldflags "-X main.GitSHA=$(git rev-parse --short HEAD || echo "GitNotFound")"
 
 # 运行架构
 arch:
-- amd64
-# - arm64
+  - amd64
+  # - arm64
 
 # 执行系统
 os:
-   - linux
-#  - osx
-#  - windows
+  - linux
+  #  - osx
+  #  - windows
 
 # go版本
 go:
-- 1.13.3
-- tip
+  - 1.13.3
+  - tip
 
 # 环境变量
 env:
   global:
-  - GO111MODULE=on 
-  # - DB=postgres DDD=123
-  # - SH=bash
-  # - VERSION="1.xx"
+    - GO111MODULE=on 
+    # - DB=postgres DDD=123
+    # - SH=bash
+    # - VERSION="1.xx"
   jobs:  # 别名是matrix
-  - TARGET=linux-amd64-fmt
-  - TARGET=linux-amd64-unit
-  - TARGET=all-build
-  - TARGET=linux-amd64-coverage
-  - TARGET=linux-amd64-fmt-unit-go-tip
-  - TARGET=linux-386-unit
+    - TARGET=linux-amd64-fmt
+    - TARGET=linux-amd64-unit
+    - TARGET=all-build
+    - TARGET=linux-amd64-coverage
+    - TARGET=linux-amd64-fmt-unit-go-tip
+    - TARGET=linux-386-unit
 
 stages:
   - test
@@ -54,13 +54,13 @@ stages:
 jobs:   # 别名是matrix
   fast_finish: true
   allow_failures:  # 允许失败的组合,失败不会导正整体失败
-  - name: "1.13.3 coverage作业"
-    go: 1.13.3
-    env: TARGET=linux-amd64-coverage
-  - go: tip
-    env: TARGET=linux-amd64-fmt-unit-go-tip
-  - go: 1.13.3
-    env: TARGET=linux-386-unit
+    - name: "1.13.3 coverage作业"
+      go: 1.13.3
+      env: TARGET=linux-amd64-coverage
+    - go: tip
+      env: TARGET=linux-amd64-fmt-unit-go-tip
+    - go: 1.13.3
+      env: TARGET=linux-386-unit
   include:  # 包含job
     - test:
       go: 1.13.3
@@ -95,71 +95,71 @@ jobs:   # 别名是matrix
       env: TARGET=linux-386-unit
 
 before_install:
-- echo "有非0退出码会立即停止运行"
-- echo "env ${DB} ${SH} ${VERSION}"
-- if [[ $TRAVIS_GO_VERSION == 1.* ]]; then echo ${TRAVIS_GO_VERSION}; fi
+  - echo "有非0退出码会立即停止运行"
+  - echo "env ${DB} ${SH} ${VERSION}"
+  - if [[ $TRAVIS_GO_VERSION == 1.* ]]; then echo ${TRAVIS_GO_VERSION}; fi
 
 install:
-- echo "有非0退出码会立即停止运行"
-- echo "当目录中存在 GNUMakefile Makefile BSDmakefile makefile时不会执行默认操作"
-- echo "install有对go来说有默认值 go get -t -v ./... go get ${gobuild_args} ./..."
-- go get -t -v -d ./...
+  - echo "有非0退出码会立即停止运行"
+  - echo "当目录中存在 GNUMakefile Makefile BSDmakefile makefile时不会执行默认操作"
+  - echo "install有对go来说有默认值 go get -t -v ./... go get ${gobuild_args} ./..."
+  - go get -t -v -d ./...
 
 before_script:
-- echo "有非0退出吗会立即停止运行"
-- echo "before script"
+  - echo "有非0退出吗会立即停止运行"
+  - echo "before script"
 
 script:
-- echo "TRAVIS_GO_VERSION=${TRAVIS_GO_VERSION}"
-- echo "不使用-mod=vendor就不会使用vendor目录缓存依赖，而去重新下载"
-- echo "如果存在Makefile 默认命令是make"
-- echo "如果command存在非0退出码不会中断执行,但是最终结果会是失败的"
-- echo "script 对go的默认值是 go test -v ./... go test ${gobuild_args} ./..."
-- go vet ./...
-- go test -v -mod=vendor ./...
-- |
-  case "${TARGET}" in
-    linux-amd64-fmt)
-      echo "GOARCH=amd64 ${gobuild_args}"
-    ;;
-    linux-amd64-unit)
-      echo "linux-amd64-unit ${TARGET}" && go test -v ./...
-    ;;
-    all-build)
-      echo "script ${TARGET}"
-    ;;
-    linux-amd64-coverage)
-      echo "script ${TARGET}"
-    ;;
-    linux-amd64-fmt-unit-go-tip)
-      echo "script ${TARGET}"
-    ;;
-    linux-386-unit)
-      echo "script ${TARGET}"
-    ;;
-    *)
-      echo "script ${TARGET}"
-    ;;
-  esac
+  - echo "TRAVIS_GO_VERSION=${TRAVIS_GO_VERSION}"
+  - echo "不使用-mod=vendor就不会使用vendor目录缓存依赖，而去重新下载"
+  - echo "如果存在Makefile 默认命令是make"
+  - echo "如果command存在非0退出码不会中断执行,但是最终结果会是失败的"
+  - echo "script 对go的默认值是 go test -v ./... go test ${gobuild_args} ./..."
+  - |
+    case "${TARGET}" in
+      linux-amd64-fmt)
+        PASSES='fmt' ./test
+      ;;
+      linux-amd64-unit)
+        PASSES='unit' ./test
+      ;;
+      all-build)
+        PASSES='build' ./test
+      ;;
+      linux-amd64-coverage)
+        echo "script ${TARGET}"
+        PASSES='cov' ./test 2>&1
+        bash <(curl -s https://codecov.io/bash) -t c8e849bf-3044-472f-a3a6-35b323a6731d
+      ;;
+      linux-amd64-fmt-unit-go-tip)
+        PASSES='fmt' ./test
+      ;;
+      linux-386-unit)
+        PASSES='unit' ./test
+      ;;
+      deploy)
+        ./build
+      ;;
+    esac
 
 after_failure:
-- echo "script 阶段失败时执行"
+  - echo "script 阶段失败时执行"
 
 after_success:
-- echo "script 阶段成功时执行"
+  - echo "script 阶段成功时执行"
 
 before_deploy:
-- echo "[OPTIONAL] deploy 步骤之前执行"
+  - echo "[OPTIONAL] deploy 步骤之前执行"
 
 after_deploy:
-- echo "[OPTIONAL] deploy 步骤之后执行"
+  - echo "[OPTIONAL] deploy 步骤之后执行"
 
 after_script:
-- echo "script 阶段之后执行,最后执行"
+  - echo "script 阶段之后执行,最后执行"
 
 notifications:
   email:
     recipients:
-    - 1014057907@qq.com
+      - 1014057907@qq.com
     on_success: always
     on_failure: always

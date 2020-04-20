@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -e
+
+source ./build
+
+function gofmt_pass {
+	fmtRes=$(gofmt -l -s -d .)
+	if [ -n "${fmtRes}" ]; then
+		echo -e "gofmt checking failed:\\n${fmtRes}"
+		exit 255
+	fi
+}
+
+function govet_pass {
+	vetRes=$(go vet ./...)
+	if [ -n "${vetRes}" ]; then
+		echo -e "govet checking failed:\\n${vetRes}"
+		exit 255
+	fi
+}
+
+function fmt_pass {
+	for p in gofmt \
+			govet \
+			; do
+		echo "'$p' started at $(date)"
+		"${p}"_pass "$@"
+		echo "'$p' completed at $(date)"
+	done
+}
+
+function unit_pass {
+	echo "Running unit tests..."
+	GO_TEST_FLAG=""
+  VERBOSE=1
+	if [ "${VERBOSE}" == "1" ]; then
+		GO_TEST_FLAG="-v"
+	fi
+	if [ "${VERBOSE}" == "2" ]; then
+		GO_TEST_FLAG="-v"
+		export CLIENT_DEBUG=1
+	fi
+
+	if [ "${RUN_ARG}" == "" ]; then
+	    RUN_ARG="-run=Test"
+	fi
+
+	# check if user provided time out, especially useful when just run one test case
+	# expectation could be different
+	USERTIMEOUT=""
+	if [ -z "${TIMEOUT}" ]; then
+		USERTIMEOUT="3m"
+	else
+		USERTIMEOUT="${TIMEOUT}"
+	fi
+	go test ${GO_TEST_FLAG} -timeout "${USERTIMEOUT}"  "${COVER}" ${RACE} ${RUN_ARG} "$@" ./...
+}
+
+# COVERDIR=covdir PASSES='cov' ./test 2>&1 
+function cov_pass {
+	out="bin"
+	if [ -n "${BINDIR}" ]; then out="${BINDIR}"; fi
+  COVERDIR=${COVERDIR-"covdir"}
+  [ -d $COVERDIR ] && rm -rf $COVERDIR
+  mkdir -p $COVERDIR
+  COVERFILE=$COVERDIR/cover.out
+  echo "" > $COVERFILE
+
+  for d in $(go list ./... | grep -v vendor); do
+      go test -race -coverprofile=profile.out -covermode=atomic $d
+      if [ -f profile.out ]; then
+          cat profile.out >> $COVERFILE
+          rm profile.out
+      fi
+  done
+}
+
+function build_pass {
+	echo "Checking build..."
+	GO_BUILD_FLAGS="-v" build
+}
+
+for pass in $PASSES; do
+	echo "Starting '$pass' pass at $(date)"
+	"${pass}"_pass "$@"
+	echo "Finished '$pass' pass at $(date)"
+done
+
+echo "Success"

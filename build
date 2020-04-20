@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+CMD_PATH=""  # cmd/traivs-learning
+
+GIT_SHA=$(git rev-parse --short HEAD || echo "GitNotFound")
+if [[ -n "$FAILPOINTS" ]]; then
+	GIT_SHA="$GIT_SHA"-FAILPOINTS
+fi
+
+# Set GO_LDFLAGS="-s" for building without symbols for debugging.
+GO_LDFLAGS="$GO_LDFLAGS -X main.GitSHA=${GIT_SHA}"
+
+build() {
+	out="bin"
+	if [[ -n "${BINDIR}" ]]; then out="${BINDIR}"; fi
+
+	# Static compilation is useful when etcd is run in a container. $GO_BUILD_FLAGS is OK
+	# shellcheck disable=SC2086
+	go build $GO_BUILD_FLAGS \
+		-ldflags "$GO_LDFLAGS" \
+		-o "${out}/travis-learning" ${CMD_PATH} || return
+
+  # package
+  # bin/travis-learning-v0.3-linux-amd64.tar.gz
+  tar -czvf bin/travis-learning-v0.3-linux-amd64.tar.gz bin/travis-learning
+}
+
+# only build when called directly, not sourced
+if echo "$0" | grep "build$" >/dev/null; then
+	build
+fi
